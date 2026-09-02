@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Skill(claude-api)",
-      "WebSearch"
-    ]
-  }
-}
