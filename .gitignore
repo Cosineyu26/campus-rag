@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 环境与密钥
+.env
+
+# 数据与模型（大文件不入库）
+data/
+models/
+
+# 前端
+node_modules/
+frontend/dist/
+
+# 系统
+.DS_Store
+Thumbs.db
