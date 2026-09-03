@@ -239,10 +239,12 @@ Run:
 ```bash
 cd pipeline && python -m venv .venv && .venv/bin/pip install -e ".[dev]"
 .venv/bin/python -c "from pipeline.config import load_config, PipelineConfig; c = load_config('config.yaml.example'); print(len(c.sites), c.qdrant_collection)"
+# 以下 docker 冒烟需要本机装有 Docker。若本机无 Docker（如 Windows 开发机），
+# 跳过 docker 两条命令不阻塞——Task 10 在部署机上统一验证 MySQL/Qdrant。
 docker compose -f ../docker-compose.yml up -d
 docker compose -f ../docker-compose.yml ps
 ```
-Expected: 输出 `2 campus_kb`；`ps` 显示 mysql、qdrant 两容器 running（healthy）。
+Expected: 输出 `2 campus_kb`；有 Docker 时 `ps` 显示 mysql、qdrant 两容器 running（healthy）。
 
 - [ ] **Step 8: 提交**
 
@@ -1079,7 +1081,7 @@ def rec(url, h="abc", status="active"):
 
 def test_upsert_and_list(tmp_path):
     db = tmp_path / "t.db"
-    reg = DocumentRegistry(f"sqlite:///{db}")
+    reg = DocumentRegistry(f"sqlite:///{db.as_posix()}")  # as_posix: Windows 路径兼容
     reg.upsert(rec("https://x/a"))
     reg.upsert(rec("https://x/a", h="newhash"))  # 重复 upsert = 更新
     reg.upsert(rec("https://x/b"))
@@ -1090,7 +1092,7 @@ def test_upsert_and_list(tmp_path):
 
 def test_mark_stale(tmp_path):
     db = tmp_path / "t.db"
-    reg = DocumentRegistry(f"sqlite:///{db}")
+    reg = DocumentRegistry(f"sqlite:///{db.as_posix()}")
     reg.upsert(rec("https://x/a"))
     reg.upsert(rec("https://x/b"))
     reg.mark_stale(["https://x/a"])
@@ -1448,6 +1450,8 @@ def test_sync_new_updated_stale(tmp_path):
     config = make_config(tmp_path)
     crawler = FakeCrawler([RawPage(url="https://x/a", category="教务政策",
                                    html_path=tmp_path / "a.html")])
+    # 注意：必须注入 parse（不读真实文件）——默认 parse 会读取不存在的 html_path
+    parse_a = lambda raw: [make_doc("https://x/a", "第一条 新内容。" * 20)]
     # 注册表里 a 是旧哈希、b 页面已消失
     reg = FakeRegistry({
         "https://x/a": RegistryRecord(url="https://x/a", title="t", category="教务政策",
@@ -1458,7 +1462,8 @@ def test_sync_new_updated_stale(tmp_path):
     qdrant = FakeQdrant()
     emb = FakeEmbedder()
     report = run_full_sync(config, crawler_factory=lambda site: crawler,
-                           embedder=emb, qdrant=qdrant, registry=reg)
+                           parse=parse_a, embedder=emb, qdrant=qdrant,
+                           registry=reg)
 
     assert isinstance(report, SyncReport)
     assert report.new == 1 and report.updated == 1
