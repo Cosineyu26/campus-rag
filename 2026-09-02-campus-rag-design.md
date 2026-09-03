@@ -342,6 +342,7 @@ campus-rag/
 ├── frontend/           # Vue3 聊天界面
 ├── deploy/             # nginx 配置、cron、备份脚本
 ├── data/               # 原始爬取文件、MySQL/Qdrant 数据卷（gitignore）
-├── models/             # 模型权重（gitignore）
-└── docs/superpowers/specs/
+└── models/             # 模型权重（gitignore）
 ```
+
+（本设计文档位于项目根目录。）
