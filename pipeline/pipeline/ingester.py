@@ -1,3 +1,5 @@
+import uuid
+
 from qdrant_client import QdrantClient, models as qm
 from qdrant_client.models import (Distance, PointStruct, SparseVector,
                                   SparseVectorParams, VectorParams)
@@ -15,6 +17,11 @@ def ensure_collection(client: QdrantClient, name: str):
     )
 
 
+def _point_id(chunk_id: str) -> str:
+    """Qdrant 点 ID 只接受 UUID/无符号整数——chunk_id 确定性映射为 UUID v5。"""
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, chunk_id))
+
+
 def _url_filter(url: str) -> qm.Filter:
     return qm.Filter(must=[qm.FieldCondition(key="url", match=qm.MatchValue(value=url))])
 
@@ -24,7 +31,7 @@ def upsert_chunks(client: QdrantClient, name: str,
     ensure_collection(client, name)
     points = [
         PointStruct(
-            id=chunk.chunk_id,
+            id=_point_id(chunk.chunk_id),
             vector={
                 "dense": dense,
                 "sparse": SparseVector(indices=list(sparse.keys()), values=list(sparse.values())),

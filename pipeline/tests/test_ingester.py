@@ -1,3 +1,4 @@
+import uuid
 from datetime import date, datetime
 
 from pipeline.ingester import delete_by_url, ensure_collection, mark_stale_by_url, upsert_chunks
@@ -40,7 +41,10 @@ def test_upsert_creates_collection_and_points():
     upsert_chunks(client, "campus_kb", chunks, embs)
     assert "campus_kb" in client.collections
     points = client.upserts["campus_kb"]
-    assert [p.id for p in points] == ["hash-0000", "hash-0001"]
+    assert [p.id for p in points] == [
+        str(uuid.uuid5(uuid.NAMESPACE_URL, "hash-0000")),
+        str(uuid.uuid5(uuid.NAMESPACE_URL, "hash-0001")),
+    ]
     assert points[0].payload["url"] == "https://x/a"
     assert points[0].payload["status"] == "active"
     assert points[0].payload["effective_date"] == "2025-09-01"
@@ -54,3 +58,14 @@ def test_delete_and_mark_stale_use_url_filter():
     mark_stale_by_url(client, "campus_kb", "https://x/a")
     assert len(client.deletes) == 1 and len(client.payloads) == 1
     assert client.payloads[0][1] == {"status": "stale"}
+
+
+def test_upsert_with_real_client_contract():
+    """用 qdrant-client 真实本地引擎验证点 ID/UPSERT 契约（防 Fake 宽松掩盖）。"""
+    from qdrant_client import QdrantClient
+
+    client = QdrantClient(":memory:")
+    chunks = [make_chunk(0)]
+    upsert_chunks(client, "campus_kb", chunks, [([0.1] * 1024, {3: 1.0})])
+    hit = client.retrieve("campus_kb", [str(uuid.uuid5(uuid.NAMESPACE_URL, "hash-0000"))])
+    assert len(hit) == 1 and hit[0].payload["url"] == "https://x/a"
