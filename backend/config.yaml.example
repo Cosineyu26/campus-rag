@@ -1,0 +1,10 @@
+# 后端配置示例（环境变量优先，复制为 config.yaml 或直接 export）
+llm_url: http://localhost:8000
+llm_model: qwen3-8b
+qdrant_url: http://localhost:6333
+qdrant_collection: campus_kb
+embed_url: http://localhost:8001
+rerank_url: http://localhost:8002
+rerank_threshold: 0.3
+history_rounds: 6
+rewrite_rounds: 3
