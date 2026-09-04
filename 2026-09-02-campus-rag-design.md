@@ -32,7 +32,7 @@
 | 决策点 | 结论 |
 |---|---|
 | 技术路线 | 方案 A：FastAPI 自研编排 + 精选组件库（不用 LangChain/LlamaIndex） |
-| 生成模型 | **Qwen3-8B GGUF Q4_K_M + llama.cpp server**（部署机 RTX 5000 16GB：8B fp16 装不下；Turing 无 FA2、2026 vLLM 对 Turing 支持存疑，llama.cpp 最稳；OpenAI 兼容接口故可后换 vLLM） |
+| 生成模型 | **Ollama（容器化）+ Qwen3:8b**（部署机 RTX 5000 16GB 实测：qwen3 需 `think:false` 关闭思考模式否则 content 为空；LLM 客户端走 Ollama 原生 /api/chat（OpenAI 兼容端点不透传 think/num_ctx）；每请求 `options.num_ctx=8192`；模型复用宿主 ~/ollama_models 已下载权重） |
 | 嵌入模型 | BGE-M3（稠密 + 稀疏双输出，FlagEmbedding 服务已部署） |
 | 重排模型 | bge-reranker-v2-m3 |
 | 向量库 | Qdrant（混合检索 + 元数据过滤） |
