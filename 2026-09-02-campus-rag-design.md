@@ -239,7 +239,7 @@ ingestion_runs:  -- 每次管线运行记录
 
 - 向量：`dense`（1024 维，BGE-M3 稠密）+ `sparse`（BGE-M3 稀疏，BM25 风格词面匹配）；
 - payload：`doc_id, title, url, category, effective_date, chunk_index, text, status, crawled_at`；
-- 点 ID：`{content_hash}-{chunk_index}`。
+- 点 ID：`uuid5(NAMESPACE_URL, f"{content_hash}-{chunk_index:04d}")` 确定性映射（Qdrant 只接受 UUID/无符号整数 ID；chunk_id 字符串保留于 payload 语义之外，仅作映射输入）。
 
 ## 9. 提示词草案
 

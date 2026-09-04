@@ -1221,9 +1221,11 @@ git commit -m "feat: 文档注册表（SQLAlchemy，增量比对事实来源）"
 - [ ] **Step 1: 写失败测试**
 
 ```python
+import uuid
 from datetime import date, datetime
 
-from pipeline.ingester import delete_by_url, ensure_collection, mark_stale_by_url, upsert_chunks
+from pipeline.ingester import (delete_by_url, ensure_collection,
+                               mark_stale_by_url, upsert_chunks)
 from pipeline.models import Chunk
 
 
@@ -1263,12 +1265,27 @@ def test_upsert_creates_collection_and_points():
     upsert_chunks(client, "campus_kb", chunks, embs)
     assert "campus_kb" in client.collections
     points = client.upserts["campus_kb"]
-    assert [p.id for p in points] == ["hash-0000", "hash-0001"]
+    # 点 ID 为 chunk_id 的确定性 UUID v5（Qdrant 不接受任意字符串 ID）
+    assert [p.id for p in points] == [
+        str(uuid.uuid5(uuid.NAMESPACE_URL, "hash-0000")),
+        str(uuid.uuid5(uuid.NAMESPACE_URL, "hash-0001")),
+    ]
     assert points[0].payload["url"] == "https://x/a"
     assert points[0].payload["status"] == "active"
     assert points[0].payload["effective_date"] == "2025-09-01"
     assert points[0].vector["sparse"].indices == [3]
     assert points[0].vector["dense"] == [0.1, 0.2]
+
+
+def test_upsert_with_real_client_contract():
+    """用 qdrant-client 真实本地引擎验证点 ID/UPSERT 契约（防 Fake 宽松掩盖）。"""
+    from qdrant_client import QdrantClient
+
+    client = QdrantClient(":memory:")
+    chunks = [make_chunk(0)]
+    upsert_chunks(client, "campus_kb", chunks, [([0.1, 0.2], {3: 1.0})])
+    hit = client.retrieve("campus_kb", [str(uuid.uuid5(uuid.NAMESPACE_URL, "hash-0000"))])
+    assert len(hit) == 1 and hit[0].payload["url"] == "https://x/a"
 
 
 def test_delete_and_mark_stale_use_url_filter():
@@ -1287,6 +1304,8 @@ Expected: FAIL，`ModuleNotFoundError: No module named 'pipeline.ingester'`
 - [ ] **Step 3: 实现 pipeline/pipeline/ingester.py**
 
 ```python
+import uuid
+
 from qdrant_client import QdrantClient, models as qm
 from qdrant_client.models import (Distance, PointStruct, SparseVector,
                                   SparseVectorParams, VectorParams)
@@ -1308,12 +1327,17 @@ def _url_filter(url: str) -> qm.Filter:
     return qm.Filter(must=[qm.FieldCondition(key="url", match=qm.MatchValue(value=url))])
 
 
+def _point_id(chunk_id: str) -> str:
+    """Qdrant 点 ID 只接受 UUID/无符号整数——chunk_id 确定性映射为 UUID v5。"""
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, chunk_id))
+
+
 def upsert_chunks(client: QdrantClient, name: str,
                   chunks: list[Chunk], embeddings: list[Embedding]):
     ensure_collection(client, name)
     points = [
         PointStruct(
-            id=chunk.chunk_id,
+            id=_point_id(chunk.chunk_id),
             vector={
                 "dense": dense,
                 "sparse": SparseVector(indices=list(sparse.keys()), values=list(sparse.values())),
