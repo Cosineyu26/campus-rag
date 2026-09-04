@@ -296,7 +296,7 @@ def test_healthz():
 git add backend/
 git commit -m "feat: backend 骨架（配置/DB/ORM/装配/healthz）
 
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+"
 ```
 
 ---
@@ -422,7 +422,7 @@ Expected: PASS（3 tests）
 git add backend/backend/llm.py backend/tests/test_llm.py
 git commit -m "feat: OpenAI 兼容 LLM 客户端（complete/stream/SSE 解析）
 
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+"
 ```
 
 ---
@@ -611,7 +611,7 @@ Expected: PASS（3 tests）
 git add backend/backend/embed_client.py backend/backend/qdrant_store.py backend/tests/
 git commit -m "feat: 嵌入客户端 + Qdrant 混合检索（RRF/status 过滤，真实引擎契约测试）
 
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+"
 ```
 
 ---
@@ -692,7 +692,7 @@ Expected: PASS（2 tests）
 git add backend/backend/rerank_client.py backend/tests/test_rerank_client.py
 git commit -m "feat: 重排服务 HTTP 客户端（契约先行）
 
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+"
 ```
 
 ---
@@ -836,7 +836,7 @@ Expected: PASS（3 tests）
 git add reranker_service/
 git commit -m "feat: bge-reranker-v2-m3 重排服务（FlagReranker，Docker，端口 8002）
 
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+"
 ```
 
 ---
@@ -1071,7 +1071,7 @@ Expected: PASS（5 tests：2 prompts + 3 retrieval）
 git add backend/backend/prompts.py backend/backend/retrieval.py backend/tests/
 git commit -m "feat: 检索编排（改写/混合检索/重排/过期与阈值过滤/兜底）
 
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+"
 ```
 
 ---
@@ -1482,7 +1482,7 @@ Expected: PASS（全部；test_chat_api 的 client fixture 中 settings.db_url �
 git add backend/
 git commit -m "feat: 聊天 API（SSE/引用解析/兜底/会话存取）
 
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+"
 ```
 
 ---
@@ -1631,7 +1631,7 @@ Expected: llama 模型 200；rerank 返回两分数且第一条更高；backend 
 git add docker-compose.yml backend/Dockerfile
 git commit -m "feat: compose 扩展 llama/reranker/backend + 后端部署冒烟
 
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+"
 ```
 
 ---

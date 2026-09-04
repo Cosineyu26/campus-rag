@@ -7,8 +7,9 @@ venv/
 # 环境与密钥
 .env
 
-# Claude Code 本地会话状态
-.claude/settings.local.json
+# 本地工具会话状态
+.claude/
+.superpowers/
 
 # 数据与模型（大文件不入库）
 data/
