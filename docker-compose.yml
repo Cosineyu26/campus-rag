@@ -67,6 +67,23 @@ services:
               count: 1
               capabilities: [gpu]
 
+  # Ollama 容器化：复用宿主已下载模型（~/ollama_models），解决其仅监听 127.0.0.1
+  # 无法被容器访问的问题；宿主 ollama CLI 仍可用（端口映射保留）
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - /home/stud1/ollama_models:/root/.ollama/models
+    ports:
+      - "11434:11434"
+    restart: always
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
   backend:
     build:
       context: ./backend
@@ -74,8 +91,7 @@ services:
         PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
 
     environment:
-      # 部署机宿主进程 Ollama（OpenAI 兼容 /v1），extra_hosts 桥接到 host-gateway
-      LLM_URL: http://host.docker.internal:11434
+      LLM_URL: http://ollama:11434
       LLM_MODEL: qwen3:8b
       EMBED_URL: http://embedding:8001
       RERANK_URL: http://reranker:8002
@@ -83,12 +99,11 @@ services:
       QDRANT_COLLECTION: campus_kb
       # DB_URL 整体经 .env 注入（密码含 % 需 URL 编码 %25，明文插值会解码失败）
       DB_URL: ${DB_URL:?set in .env as mysql+pymysql://campus:ENCODED_PWD@mysql:3306/campus_rag?charset=utf8mb4}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     ports:
       - "8080:8080"
     restart: always
     depends_on:
+      - ollama
       - embedding
       - reranker
       - qdrant
