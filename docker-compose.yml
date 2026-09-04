@@ -36,7 +36,7 @@ services:
     environment:
       RERANKER_MODEL_DIR: /models/bge-reranker-v2-m3
     volumes:
-      - ./models/reranker:/models/bge-reranker-v2-m3
+      - /home/stud1/models/reranker:/models/bge-reranker-v2-m3
     ports:
       - "8002:8002"
     restart: always
@@ -55,7 +55,7 @@ services:
     environment:
       BGE_M3_DIR: /models/bge-m3
     volumes:
-      - ./models/bge-m3:/models/bge-m3
+      - /home/stud1/models/bge-m3:/models/bge-m3
     ports:
       - "8001:8001"
     restart: always
