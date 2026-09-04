@@ -113,7 +113,7 @@
 
 - BGE-M3 批量计算（batch 64，跑在嵌入服务上）；
 - Qdrant 集合 `campus_kb`：稠密向量（1024 维）+ 稀疏向量 + 元数据 payload（见 §8.2）；
-- 点 ID = `{content_hash}-{chunk_index}` 确定性生成，重复入库幂等。
+- 点 ID = `uuid5(NAMESPACE_URL, f"{content_hash}-{chunk_index:04d}")` 确定性生成（Qdrant 只接受 UUID/无符号整数），重复入库幂等。
 
 ### 4.5 增量更新（每周）
 
