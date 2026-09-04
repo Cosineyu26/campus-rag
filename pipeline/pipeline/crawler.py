@@ -81,6 +81,7 @@ class Crawler:
         self.fetch_page = fetch_page or fetch_page_default
         self.client = client
         self.robots = robots
+        self.failures: list[str] = []  # 本次爬取失败的页面 URL（供 sync 判断站点爬取健康度）
 
     async def crawl(self) -> list[RawPage]:
         import httpx
@@ -103,8 +104,9 @@ class Crawler:
             visited.add(url)
             try:
                 page = await self.fetch_page(url, self.client)
-            except Exception as e:  # 单页失败不中断整轮
+            except Exception as e:  # 单页失败不中断整轮，但记录失败供 vanish 阶段排除误标
                 print(f"[crawler] skip {url}: {e}")
+                self.failures.append(url)
                 continue
 
             pdf_files = await self._download_pdfs(page)

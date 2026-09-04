@@ -1,7 +1,8 @@
 import uuid
 from datetime import date, datetime
 
-from pipeline.ingester import delete_by_url, ensure_collection, mark_stale_by_url, upsert_chunks
+from pipeline.ingester import (delete_by_url, ensure_collection, mark_active_by_url,
+                               mark_stale_by_url, upsert_chunks)
 from pipeline.models import Chunk
 
 
@@ -56,8 +57,10 @@ def test_delete_and_mark_stale_use_url_filter():
     client = FakeQdrant()
     delete_by_url(client, "campus_kb", "https://x/a")
     mark_stale_by_url(client, "campus_kb", "https://x/a")
-    assert len(client.deletes) == 1 and len(client.payloads) == 1
+    mark_active_by_url(client, "campus_kb", "https://x/a")
+    assert len(client.deletes) == 1 and len(client.payloads) == 2
     assert client.payloads[0][1] == {"status": "stale"}
+    assert client.payloads[1][1] == {"status": "active"}
 
 
 def test_upsert_with_real_client_contract():

@@ -63,3 +63,9 @@ def mark_stale_by_url(client: QdrantClient, name: str, url: str):
     """页面消失时标记过期，不删除（保留审计痕迹）。"""
     client.set_payload(collection_name=name, payload={"status": "stale"},
                        points=qm.FilterSelector(filter=_url_filter(url)))
+
+
+def mark_active_by_url(client: QdrantClient, name: str, url: str):
+    """页面复活（内容未变但此前误标 stale）时恢复 active，与 mark_stale_by_url 对称。"""
+    client.set_payload(collection_name=name, payload={"status": "active"},
+                       points=qm.FilterSelector(filter=_url_filter(url)))
