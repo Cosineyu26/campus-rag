@@ -17,9 +17,10 @@ def ensure_collection(client: QdrantClient, name: str):
     )
 
 
-def _point_id(chunk_id: str) -> str:
-    """Qdrant 点 ID 只接受 UUID/无符号整数——chunk_id 确定性映射为 UUID v5。"""
-    return str(uuid.uuid5(uuid.NAMESPACE_URL, chunk_id))
+def _point_id(url: str, chunk_id: str) -> str:
+    """Qdrant 点 ID 只接受 UUID/无符号整数——url+chunk_id 确定性映射为 UUID v5
+    （url 入参隔离不同站点的同名 chunk_id，防碰撞）。"""
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"{url}|{chunk_id}"))
 
 
 def _url_filter(url: str) -> qm.Filter:
@@ -31,7 +32,7 @@ def upsert_chunks(client: QdrantClient, name: str,
     ensure_collection(client, name)
     points = [
         PointStruct(
-            id=_point_id(chunk.chunk_id),
+            id=_point_id(chunk.url, chunk.chunk_id),
             vector={
                 "dense": dense,
                 "sparse": SparseVector(indices=list(sparse.keys()), values=list(sparse.values())),

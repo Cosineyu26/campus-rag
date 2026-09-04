@@ -42,9 +42,10 @@ def test_upsert_creates_collection_and_points():
     upsert_chunks(client, "campus_kb", chunks, embs)
     assert "campus_kb" in client.collections
     points = client.upserts["campus_kb"]
+    # uuid5 输入 = f"{url}|{chunk_id}"（url 纳入命名空间隔离不同站点的同名 chunk_id）
     assert [p.id for p in points] == [
-        str(uuid.uuid5(uuid.NAMESPACE_URL, "hash-0000")),
-        str(uuid.uuid5(uuid.NAMESPACE_URL, "hash-0001")),
+        str(uuid.uuid5(uuid.NAMESPACE_URL, "https://x/a|hash-0000")),
+        str(uuid.uuid5(uuid.NAMESPACE_URL, "https://x/a|hash-0001")),
     ]
     assert points[0].payload["url"] == "https://x/a"
     assert points[0].payload["status"] == "active"
@@ -70,5 +71,6 @@ def test_upsert_with_real_client_contract():
     client = QdrantClient(":memory:")
     chunks = [make_chunk(0)]
     upsert_chunks(client, "campus_kb", chunks, [([0.1] * 1024, {3: 1.0})])
-    hit = client.retrieve("campus_kb", [str(uuid.uuid5(uuid.NAMESPACE_URL, "hash-0000"))])
+    pid = str(uuid.uuid5(uuid.NAMESPACE_URL, f"https://x/a|hash-0000"))
+    hit = client.retrieve("campus_kb", [pid])
     assert len(hit) == 1 and hit[0].payload["url"] == "https://x/a"
