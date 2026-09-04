@@ -8,10 +8,14 @@ from pipeline.parser import clean_text, extract_effective_date, parse, sha256
 
 
 def make_pdf(path: Path, text: str):
+    """按页宽分多行写入（单行 insert_text 超宽会被截断，长文本日期段丢失）。"""
     doc = fitz.open()
     page = doc.new_page()
     # PyMuPDF 默认 helv 字体不含中文字形（中文会被替换成占位符），须显式指定内置中文字体
-    page.insert_text((72, 72), text, fontname="china-s")
+    y = 72
+    for i in range(0, len(text), 40):
+        page.insert_text((72, y), text[i:i + 40], fontname="china-s")
+        y += 20
     doc.save(path)
     doc.close()
 
