@@ -28,6 +28,7 @@ class PipelineConfig:
     article_url_pattern: str = ""
     qdrant_url: str = field(default_factory=lambda: os.getenv("QDRANT_URL", "http://localhost:6333"))
     qdrant_collection: str = "campus_kb"
+    # 本地开发默认凭据（与 docker-compose 的 .env 一致）；生产环境必须设 MYSQL_URL 覆盖
     mysql_url: str = field(default_factory=lambda: os.getenv(
         "MYSQL_URL", "mysql+pymysql://campus:campus@localhost:3306/campus_rag?charset=utf8mb4"))
     embedding_url: str = field(default_factory=lambda: os.getenv("EMBEDDING_URL", "http://localhost:8001"))

@@ -3,10 +3,11 @@ services:
     image: mysql:8
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      # 密码必须通过 .env 提供（无默认值——公开仓库不带可部署默认凭据）
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set in .env}
       MYSQL_DATABASE: campus_rag
       MYSQL_USER: campus
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-campus}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set in .env}
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     ports:
       - "3306:3306"

@@ -1,11 +1,11 @@
 # 校园 RAG 数据管线——每周增量同步
-# 部署（在部署机执行，无需 sudo）：
+# 部署（在部署机执行，无需 sudo）——将 /home/<用户名>/campus-rag 替换为实际部署路径：
 #   mkdir -p ~/campus-rag/logs
-#   printf '17 3 * * 0 /home/stud1/campus-rag/run.sh >> /home/stud1/campus-rag/logs/pipeline.log 2>&1\n' | crontab -
+#   printf '17 3 * * 0 /home/<用户名>/campus-rag/run.sh >> /home/<用户名>/campus-rag/logs/pipeline.log 2>&1\n' | crontab -
 # 依赖：~/campus-rag/run.sh 存在（连接串 env 注入，cron 不读 .bashrc）
 
 # 每周日 03:17 增量同步（避开学校服务器高峰与工作日流量）
-17 3 * * 0 /home/stud1/campus-rag/run.sh >> /home/stud1/campus-rag/logs/pipeline.log 2>&1
+17 3 * * 0 /home/<用户名>/campus-rag/run.sh >> /home/<用户名>/campus-rag/logs/pipeline.log 2>&1
 
 # 日志查看：tail -f ~/campus-rag/logs/pipeline.log
 # 手动触发：~/campus-rag/run.sh
