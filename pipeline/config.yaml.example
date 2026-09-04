@@ -1,0 +1,18 @@
+sites:
+  - name: 教务处规章制度
+    category: 教务政策
+    entry_urls:
+      - https://jwc.example.edu.cn/rule/
+    allowed_domain: jwc.example.edu.cn
+    max_depth: 3
+    delay_seconds: 2.5
+  - name: 新生指南
+    category: 新生问答
+    entry_urls:
+      - https://zs.example.edu.cn/newstu/
+    allowed_domain: zs.example.edu.cn
+
+options:
+  data_dir: data
+  chunk_size: 500
+  chunk_overlap: 60
