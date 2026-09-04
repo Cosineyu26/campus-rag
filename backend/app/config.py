@@ -9,8 +9,8 @@ def _env(key: str, default: str) -> str:
 @dataclass
 class Settings:
     db_url: str = field(default_factory=lambda: _env("DB_URL", ""))
-    llm_url: str = field(default_factory=lambda: _env("LLM_URL", "http://localhost:8000"))
-    llm_model: str = field(default_factory=lambda: _env("LLM_MODEL", "qwen3-8b"))
+    llm_url: str = field(default_factory=lambda: _env("LLM_URL", "http://localhost:11434"))
+    llm_model: str = field(default_factory=lambda: _env("LLM_MODEL", "qwen3:8b"))
     qdrant_url: str = field(default_factory=lambda: _env("QDRANT_URL", "http://localhost:6333"))
     qdrant_collection: str = field(default_factory=lambda: _env("QDRANT_COLLECTION", "campus_kb"))
     embed_url: str = field(default_factory=lambda: _env("EMBED_URL", "http://localhost:8001"))
