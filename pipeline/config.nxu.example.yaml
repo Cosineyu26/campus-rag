@@ -1,0 +1,33 @@
+# 宁夏大学官网爬取配置（生产用：复制为 config.yaml 后按需调整）
+# 侦察结论（2026-09-02）：jxyxbzb = 教学运行保障部（教务处新站），静态 CMS
+# 栏目：gltl.htm 管理规定（核心）· bfwj.htm 办法文件 · bszn.htm 办事指南 · zytz.htm 重要通知
+sites:
+  - name: 教学运行保障部-管理规定
+    category: 教务政策
+    entry_urls:
+      - https://jxyxbzb.nxu.edu.cn/gltl.htm
+    allowed_domain: jxyxbzb.nxu.edu.cn
+    max_depth: 2
+    delay_seconds: 2.5
+
+  - name: 教学运行保障部-办法与指南
+    category: 教务政策
+    entry_urls:
+      - https://jxyxbzb.nxu.edu.cn/bfwj.htm
+      - https://jxyxbzb.nxu.edu.cn/bszn.htm
+    allowed_domain: jxyxbzb.nxu.edu.cn
+    max_depth: 2
+    delay_seconds: 2.5
+
+  - name: 本科生院文件
+    category: 教务政策
+    entry_urls:
+      - https://bksy.nxu.edu.cn/
+    allowed_domain: bksy.nxu.edu.cn
+    max_depth: 2
+    delay_seconds: 2.5
+
+options:
+  data_dir: data
+  chunk_size: 500
+  chunk_overlap: 60
