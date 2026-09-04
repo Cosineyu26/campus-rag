@@ -7,7 +7,7 @@ name = "campus-rag-pipeline"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
-    "crawl4ai>=0.7",
+    "crawl4ai>=0.7,<1.0",
     "trafilatura>=1.8",
     "pymupdf>=1.24",
     "qdrant-client>=1.10",

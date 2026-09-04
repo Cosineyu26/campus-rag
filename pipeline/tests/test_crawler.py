@@ -1,8 +1,9 @@
 import asyncio
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
-from pipeline.crawler import Crawler, FetchError, PageData
+from pipeline.crawler import Crawler, FetchError, PageData, links_from_result
 from pipeline.config import SiteConfig
 
 
@@ -65,3 +66,33 @@ def test_crawl_respects_depth_and_visited(tmp_path):
     crawler = Crawler(make_site(tmp_path), tmp_path, fetch_page=fetcher)
     asyncio.run(crawler.crawl())
     assert fetcher.calls.count("https://school.edu.cn/a") == 1  # 自环只爬一次
+
+
+def _fake_result(links=None):
+    return SimpleNamespace(success=True, url="https://school.edu.cn/p",
+                           html="<html></html>", links=links)
+
+
+def test_links_from_result_merges_internal_and_external():
+    """dict 形 links：internal+external 合并按序提取 href。"""
+    result = _fake_result(links={
+        "internal": [{"href": "/a", "text": "甲"}, {"href": "/b", "text": "乙"}],
+        "external": [{"href": "https://school.edu.cn/c", "text": "丙"}],
+    })
+    assert links_from_result(result) == ["/a", "/b", "https://school.edu.cn/c"]
+
+
+def test_links_from_result_handles_empty_links():
+    """空/缺失 links 都返回空列表，不抛异常。"""
+    assert links_from_result(_fake_result(links=None)) == []
+    assert links_from_result(_fake_result(links={})) == []
+    assert links_from_result(_fake_result(links={"internal": [], "external": []})) == []
+
+
+def test_links_from_result_skips_malformed_entries():
+    """非 dict 条目、缺 href、空 href 一律剔除，只留有效链接。"""
+    result = _fake_result(links={
+        "internal": [{"href": "/a"}, {"text": "无href"}, "坏条目", None, {"href": ""}],
+        "external": [{"href": "/b"}, 42],
+    })
+    assert links_from_result(result) == ["/a", "/b"]
