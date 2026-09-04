@@ -12,7 +12,8 @@ class Base(DeclarativeBase):
 class DocumentRow(Base):
     __tablename__ = "documents"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    url: Mapped[str] = mapped_column(String(1024), unique=True, index=True)
+    # String(768): utf8mb4 下 768*4=3072 字节 = InnoDB 唯一索引键上限（1024 会 ERROR 1071）
+    url: Mapped[str] = mapped_column(String(768), unique=True, index=True)
     title: Mapped[str] = mapped_column(String(512), default="")
     category: Mapped[str] = mapped_column(String(64), default="")
     content_hash: Mapped[str] = mapped_column(String(64))
