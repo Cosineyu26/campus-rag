@@ -34,5 +34,7 @@ def load_config(path: str | Path) -> PipelineConfig:
     with open(path, encoding="utf-8") as f:
         raw = yaml.safe_load(f)
     sites = [SiteConfig(**s) for s in raw["sites"]]
-    opts = raw.get("options", {})
+    opts = dict(raw.get("options", {}))
+    if "data_dir" in opts:  # dataclass 不做类型转换，YAML 里的路径字符串必须显式转 Path
+        opts["data_dir"] = Path(opts["data_dir"])
     return PipelineConfig(sites=sites, **opts)
