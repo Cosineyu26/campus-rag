@@ -61,9 +61,13 @@
                              └──────────▲──────────────────┘
                                         │
 ┌── 数据管线（每周定时任务，CPU 跑）──────┘
-│ crawl4ai 爬取官网 → 解析清洗 → 分块 → 嵌入 → 入库
+│ 纯 HTTP 爬取官网 → 解析清洗 → 分块 → 嵌入 → 入库
 │ 增量机制: URL+内容哈希比对 → 新增/更新/标记过期
 ```
+
+> 架构图注：部署机为 **RTX 5000 16GB**（非 V100 32GB）——§2.1 硬件约束以部署实测为准，
+> 显存预算（§3.1）按部署机实际容量（16GB）重新核算：生成模型须 4-bit（Turing 支持
+> AWQ/GPTQ 内核，8B fp16 装不下）；嵌入+重排 fp16 约 2.4GB。具体策略随后端计划更新。
 
 ### 3.1 显存预算（V100 32GB）
 
@@ -92,14 +96,17 @@
 
 ### 4.1 爬取
 
-- crawl4ai 定向爬取：配置目标栏目入口 URL（教务规章、新生指南、通知公告等），限定同域名、深度 2~3 层，不盲爬全站；
+- **定向 BFS**：配置目标栏目入口 URL（教务规章、新生指南、通知公告等），限定同域名、深度 2~3 层，不盲爬全站；
+- **抓取层默认纯 HTTP**（httpx + 标准库 HTMLParser 提取链接）——Task 10 实测学校 CMS 为服务端渲染静态 HTML，无需浏览器；目标站若需 JS 渲染，可在 `fetch_page` 注入点替换为 crawl4ai/Playwright（crawl4ai 依赖保留于 pyproject 备选）；
 - 页面中的 PDF 链接下载到本地，走独立解析流程；
-- 礼貌性：遵守 robots.txt，请求间隔 2~3 秒；
+- 礼貌性：遵守 robots.txt（拉取失败放行）、请求间隔 2~3 秒、失败页收集进报告不中断整轮；
+- **文章 URL 收录过滤**（`article_url_pattern` 配置）：仅收录匹配文章形态的 URL（如 `(/info/|content\.jsp|\.pdf)`）——排除 CMS 栏目页/列表页/分页等 .htm 骨架（Task 10 实测 110 篇中含 20 篇栏目页垃圾，靠此过滤归零）；
 - 调度：cron 每周一次（周日凌晨）；产出：磁盘上的原始文件目录（HTML 提取文本 + PDF）。
 
 ### 4.2 解析与清洗
 
-- HTML → trafilatura 正文提取（剥离导航/页脚/面包屑）；
+- HTML → trafilatura 正文提取（`favor_precision=True` 拒绝无文章结构的导航/列表页；剥离导航/页脚/面包屑）；
+- **正文长度过滤**：提取文本 < 40 字符丢弃（栏目列表页的导航残留可能超百字符，长度阈值与 favor_precision 双保险，Task 10 实测）；
 - PDF → PyMuPDF 提取文字；**若政策文件为扫描件，追加 PaddleOCR 本地 OCR 流程**（开工前抽查确认，见 §13 风险清单）；
 - 每篇文档提取元数据：URL、栏目分类、标题、发布日期、文号/生效日期（规则提取，取不到留空人工补）、内容哈希（SHA-256）、爬取时间。
 
@@ -111,7 +118,8 @@
 
 ### 4.4 嵌入入库
 
-- BGE-M3 批量计算（batch 64，跑在嵌入服务上）；
+- BGE-M3 批量计算（batch 32，跑在嵌入服务上）；
+- **嵌入服务用官方 FlagEmbedding（`BGEM3FlagModel`）而非 sentence-transformers**——HF 的 BGE-M3 模型卡为 Transformer+Pooling+Normalize 三模块，无 sparse 输出；sentence-transformers（实测 5.7/4.1/3.3）均无法返回 lexical_weights。dense(1024)+sparse 输出与管线契约一致；
 - Qdrant 集合 `campus_kb`：稠密向量（1024 维）+ 稀疏向量 + 元数据 payload（见 §8.2）；
 - 点 ID = `uuid5(NAMESPACE_URL, f"{url}|{content_hash}-{chunk_index:04d}")` 确定性生成（Qdrant 只接受 UUID/无符号整数；url 纳入输入使跨栏目同文各自成点），重复入库幂等。
 
