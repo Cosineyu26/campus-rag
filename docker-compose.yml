@@ -28,7 +28,10 @@ services:
       - qdrant_data:/qdrant/storage
 
   reranker:
-    build: ./reranker_service
+    build:
+      context: ./reranker_service
+      args:
+        PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple   # 国内构建镜像加速
     image: campus-rag-reranker
     environment:
       RERANKER_MODEL_DIR: /models/bge-reranker-v2-m3
@@ -65,7 +68,11 @@ services:
               capabilities: [gpu]
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      args:
+        PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
+
     environment:
       # 部署机宿主进程 Ollama（OpenAI 兼容 /v1），extra_hosts 桥接到 host-gateway
       LLM_URL: http://host.docker.internal:11434
