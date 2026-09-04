@@ -27,6 +27,65 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
+  reranker:
+    build: ./reranker_service
+    image: campus-rag-reranker
+    environment:
+      RERANKER_MODEL_DIR: /models/bge-reranker-v2-m3
+    volumes:
+      - ./models/reranker:/models/bge-reranker-v2-m3
+    ports:
+      - "8002:8002"
+    restart: always
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # 自建镜像 campus-rag-embedding（已在部署机构建）；迁入 compose 以便 backend
+  # 经服务名访问，同时保留宿主端口 8001 映射——pipeline 宿主进程走 localhost:8001
+  embedding:
+    image: campus-rag-embedding
+    environment:
+      BGE_M3_DIR: /models/bge-m3
+    volumes:
+      - ./models/bge-m3:/models/bge-m3
+    ports:
+      - "8001:8001"
+    restart: always
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  backend:
+    build: ./backend
+    environment:
+      # 部署机宿主进程 Ollama（OpenAI 兼容 /v1），extra_hosts 桥接到 host-gateway
+      LLM_URL: http://host.docker.internal:11434
+      LLM_MODEL: qwen3:8b
+      EMBED_URL: http://embedding:8001
+      RERANK_URL: http://reranker:8002
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: campus_kb
+      DB_URL: mysql+pymysql://campus:${MYSQL_PASSWORD:?set in .env}@mysql:3306/campus_rag?charset=utf8mb4
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8080:8080"
+    restart: always
+    depends_on:
+      - embedding
+      - reranker
+      - qdrant
+      - mysql
+
 volumes:
   mysql_data:
   qdrant_data:
