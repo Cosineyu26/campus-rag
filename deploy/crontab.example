@@ -1,11 +1,11 @@
 # 校园 RAG 数据管线——每周增量同步
-# 部署（在部署机执行）：
-#   mkdir -p /home/stud1/campus-rag/logs
-#   crontab -e   # 粘贴本文件内容（用户 stud1 的 crontab）
-# 路径说明：pipeline venv 位于 ~/campus-rag/pipeline/.venv（Linux 用 bin/ 路径）
+# 部署（在部署机执行，无需 sudo）：
+#   mkdir -p ~/campus-rag/logs
+#   printf '17 3 * * 0 /home/stud1/campus-rag/run.sh >> /home/stud1/campus-rag/logs/pipeline.log 2>&1\n' | crontab -
+# 依赖：~/campus-rag/run.sh 存在（连接串 env 注入，cron 不读 .bashrc）
 
 # 每周日 03:17 增量同步（避开学校服务器高峰与工作日流量）
-17 3 * * 0 cd /home/stud1/campus-rag/pipeline && /home/stud1/campus-rag/pipeline/.venv/bin/python -m pipeline run --config config.yaml >> /home/stud1/campus-rag/logs/pipeline.log 2>&1
+17 3 * * 0 /home/stud1/campus-rag/run.sh >> /home/stud1/campus-rag/logs/pipeline.log 2>&1
 
-# 日志查看：tail -f /home/stud1/campus-rag/logs/pipeline.log
-# 失败排查：cron 会把 stderr 寄到 stud1 邮箱（若未配置邮件则看日志尾部）
+# 日志查看：tail -f ~/campus-rag/logs/pipeline.log
+# 手动触发：~/campus-rag/run.sh
