@@ -147,6 +147,36 @@ def test_sync_revives_unchanged_stale_doc(tmp_path):
     assert qdrant.upserts == []                          # 内容未变不重复入库
 
 
+def test_sync_revive_failure_isolated_and_recoverable(tmp_path):
+    """复活时 Qdrant 失败：记入 report.failed 不中断整轮，注册表保持 stale 供下轮自愈。"""
+    from pipeline.registry import RegistryRecord
+
+    class BrokenQdrant(FakeQdrant):
+        def set_payload(self, collection_name, payload, points):
+            raise RuntimeError("qdrant down")
+
+    config = make_config(tmp_path)
+    d_a = make_doc("https://x/a", "同样的内容")
+    crawler = FakeCrawler([
+        RawPage(url=d_a.url, category="教务政策", html_path=tmp_path / "a.html"),
+        RawPage(url="https://x/b", category="教务政策", html_path=tmp_path / "b.html"),
+    ])
+    reg = FakeRegistry({"https://x/a": RegistryRecord(url=d_a.url, title="t",
+                                                      category="教务政策",
+                                                      content_hash=d_a.content_hash,
+                                                      status="stale")})
+    qdrant = BrokenQdrant()
+    report = run_full_sync(
+        config, crawler_factory=lambda site: crawler,
+        parse=lambda raw: [d_a if raw.url == d_a.url else make_doc(raw.url, "新文件。" * 5)],
+        embedder=FakeEmbedder(), qdrant=qdrant, registry=reg)
+    assert report.failed == ["https://x/a: qdrant down"]
+    assert report.revived == 0
+    assert report.new == 1                       # 后续文档继续处理，未被中断
+    assert len(qdrant.upserts) == 1              # x/b 正常入库
+    assert reg.rows["https://x/a"].status == "stale"  # 注册表未提前翻转 → 下轮自愈
+
+
 def test_sync_vanish_excludes_failed_site_category(tmp_path):
     """站点爬取失败（零页面或有失败）时其栏目 URL 不被误标 stale；健康站点照常标记。"""
     from pipeline.registry import RegistryRecord

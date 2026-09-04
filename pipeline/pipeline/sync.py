@@ -55,30 +55,33 @@ def run_full_sync(config: PipelineConfig, *,
             kind = "new"
         elif rec.content_hash != doc.content_hash:
             kind = "updated"
+        elif rec.status != "stale":
+            continue  # 未变化且活跃：跳过
         else:
-            if rec.status == "stale":
-                # 复活：内容未变但此前被标 stale（如一次失败爬取误标），恢复 active
-                reg.upsert(RegistryRecord(url=doc.url, title=doc.title, category=doc.category,
-                                          content_hash=doc.content_hash, status="active",
-                                          effective_date=doc.effective_date, published_at=doc.published_at))
-                mark_active_by_url(q, config.qdrant_collection, doc.url)
-                report.revived += 1
-            continue  # 未变化，跳过（stale 时复活后同样不重复入库）
+            kind = "revive"  # 内容未变但此前被标 stale（如一次失败爬取误标），需复活
         try:
-            chunks = chunk(doc, config.chunk_size, config.chunk_overlap)
-            embeddings = emb.embed([c.text for c in chunks])
-            if kind == "updated":
-                delete_by_url(q, config.qdrant_collection, doc.url)
-            upsert_chunks(q, config.qdrant_collection, chunks, embeddings)
+            if kind == "revive":
+                # qdrant-first：先翻 Qdrant payload 再提交注册表——中途失败时注册表
+                # 仍为 stale，下一轮会再次进入本分支自愈（与 new/updated 顺序一致）
+                mark_active_by_url(q, config.qdrant_collection, doc.url)
+            else:
+                chunks = chunk(doc, config.chunk_size, config.chunk_overlap)
+                embeddings = emb.embed([c.text for c in chunks])
+                if kind == "updated":
+                    delete_by_url(q, config.qdrant_collection, doc.url)
+                upsert_chunks(q, config.qdrant_collection, chunks, embeddings)
             reg.upsert(RegistryRecord(
                 url=doc.url, title=doc.title, category=doc.category,
                 content_hash=doc.content_hash, status="active",
                 effective_date=doc.effective_date, published_at=doc.published_at))
             if kind == "new":
                 report.new += 1
+            elif kind == "revive":
+                report.revived += 1
             else:
                 report.updated += 1
         except Exception as e:
+            # doc 级异常隔离：记录失败后继续处理下一文档，不中断整轮（含 vanish 阶段）
             report.failed.append(f"{doc.url}: {e}")
 
     # 站点本次爬取失败时其全部栏目 URL 不做消失判定（避免把一次故障误判为页面下架）
