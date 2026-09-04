@@ -1756,3 +1756,21 @@ git commit -m "chore: 管线定时任务模板与冒烟配置"
 - [ ] 冒烟同步两次：第一次 new>0，第二次全 0（幂等验证）
 - [ ] documents 表与 Qdrant payload 数据一致
 - [ ] 设计文档 §4 的每个环节都有对应实现：爬取(crawler) / 清洗解析(parser) / 分块(chunker) / 嵌入(embedder+service) / 入库(ingester) / 增量(sync+registry) / 调度(crontab)
+
+---
+
+## 实施记录（2026-09-03/04 实际执行后的最终状态）
+
+Task 1-9 全部完成（27/27 测试全绿，Windows 本机；Task 10 冒烟待 V100 部署机）。Task 级 brief 代码为实施基线，**最终代码以 git 为准**；执行中经评审批准的全部修复（均已同步设计文档与相关接口代码）：
+
+1. `load_config` 显式转 `data_dir` 为 Path（T1）
+2. `fetch_page_default` 适配 crawl4ai>=0.9 links dict 结构；`links_from_result` 纯函数 + 单测（T2/最终审查）
+3. `extract_effective_date`/测试 fixture：HTML fixture 扩展、PDF 用 china-s 字体（T3）
+4. `sentence-transformers>=3.0,<6.0`（6.x 移除 return_dense/return_sparse）；FakeModel 补 normalize_embeddings（T6）
+5. registry `url` 列 `String(768)`（utf8mb4 唯一索引上限 3072B）（T7）
+6. Qdrant 点 ID = `uuid5(NAMESPACE_URL, f"{url}|{content_hash}-{idx:04d}")` + 真实 `QdrantClient(":memory:")` 契约测试（T8/最终审查）
+7. sync：stale 复活路径（qdrant-first + doc 级异常隔离 + `SyncReport.revived`）；失败感知 vanish（站点爬取 0 页或有失败 → 该 category 不做 stale 标记）；测试 fixture 补新 URL c；`__main__.py` `raise SystemExit(main())`（T9/最终审查）
+8. `crawl4ai>=0.7,<1.0` 上界（最终审查）；embed 响应长度守卫（M1）；compose `restart: always`（I1 附带）
+9. 设计决定（最终审查后记录于设计文档）：§4.5.3 到期自动标记**不实现**（检索层 effective_date 过滤已覆盖）；`ingestion_runs` 表 v1 defer；§4.2 文号提取 defer（数据模型无文号字段）
+
+**遗留 minor（已记录 ledger，final review triage 后可不阻塞）**：条款正则 "X、" 误切日常行文；`split_by_size` 无参数守卫；日期正则不跨行、pattern 2 左匹配修订日；embed 形状守卫已有（M1 已修）而 chunker 边界、fetch 每页新建浏览器实例（真实冒烟时评估）等。
