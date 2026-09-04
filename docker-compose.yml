@@ -81,7 +81,8 @@ services:
       RERANK_URL: http://reranker:8002
       QDRANT_URL: http://qdrant:6333
       QDRANT_COLLECTION: campus_kb
-      DB_URL: mysql+pymysql://campus:${MYSQL_PASSWORD:?set in .env}@mysql:3306/campus_rag?charset=utf8mb4
+      # DB_URL 整体经 .env 注入（密码含 % 需 URL 编码 %25，明文插值会解码失败）
+      DB_URL: ${DB_URL:?set in .env as mysql+pymysql://campus:ENCODED_PWD@mysql:3306/campus_rag?charset=utf8mb4}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
