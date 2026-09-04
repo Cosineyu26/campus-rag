@@ -918,7 +918,7 @@ def test_pipeline_filters_expired_and_low_score():
         def rerank(self, query, docs):
             return [0.95, 0.2, 0.31, 0.9]  # 与 docs 等长
 
-    # 过期（2020）与低分（0.2）被剔除；阈值 0.3
+    # B(2020 已过期) 与低分(0.2) 被剔除、D(2030 未生效)被剔除；阈值 0.3
     emb = type("E", (), {"embed": lambda self, t: [([0.1] * 4, {1: 1.0})] * len(t)})()
     qd = type("Q", (), {"query_points": lambda self, **kw: type("R", (), {
         "points": [
@@ -934,7 +934,7 @@ def test_pipeline_filters_expired_and_low_score():
             type("P", (), {"payload": {"text": "D", "url": "u4", "title": "t",
                                        "category": "c", "effective_date": "2030-01-01"},
                             "score": 1.0})(),
-        ]})())()
+        ]})})()
 
     settings = Settings(top_n_rerank=20, top_n_final=5, rerank_threshold=0.3)
     pipe = RetrievePipeline(settings=settings, embed=emb, qdrant=qd,
