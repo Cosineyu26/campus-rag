@@ -113,13 +113,13 @@
 
 - BGE-M3 批量计算（batch 64，跑在嵌入服务上）；
 - Qdrant 集合 `campus_kb`：稠密向量（1024 维）+ 稀疏向量 + 元数据 payload（见 §8.2）；
-- 点 ID = `uuid5(NAMESPACE_URL, f"{content_hash}-{chunk_index:04d}")` 确定性生成（Qdrant 只接受 UUID/无符号整数），重复入库幂等。
+- 点 ID = `uuid5(NAMESPACE_URL, f"{url}|{content_hash}-{chunk_index:04d}")` 确定性生成（Qdrant 只接受 UUID/无符号整数；url 纳入输入使跨栏目同文各自成点），重复入库幂等。
 
 ### 4.5 增量更新（每周）
 
 1. 重爬栏目 → 当前 URL 集合 + 每页哈希；
 2. 与 MySQL 文档注册表比对：**新增** → 完整入库；**内容变更** → 删旧块、入新块；**页面消失** → 注册表与 Qdrant 均标记 `stale`（不删除，保留审计痕迹）；
-3. 已知生效日期的政策到期自动标记过期；
+3. ~~已知生效日期的政策到期自动标记过期~~（**已决定不实现**：检索层 §5 的 `effective_date` 过滤（为空或 ≤ 今天）已保证时效正确性，管线级到期标记冗余；若未来需要可在 ingestion 阶段补充）；
 4. 检索时默认过滤 stale/过期块。
 
 ### 4.6 人工兜底
@@ -227,7 +227,7 @@ documents:   -- 文档注册表（增量比对依据）
   last_crawled_at DATETIME
   last_ingested_at DATETIME
 
-ingestion_runs:  -- 每次管线运行记录
+ingestion_runs:  -- 每次管线运行记录（v1 未实现——阶段 2 上线 cron 前补充）
   id         BIGINT PK AUTO_INCREMENT
   started_at DATETIME
   finished_at DATETIME
@@ -239,7 +239,7 @@ ingestion_runs:  -- 每次管线运行记录
 
 - 向量：`dense`（1024 维，BGE-M3 稠密）+ `sparse`（BGE-M3 稀疏，BM25 风格词面匹配）；
 - payload：`doc_id, title, url, category, effective_date, chunk_index, text, status, crawled_at`；
-- 点 ID：`uuid5(NAMESPACE_URL, f"{content_hash}-{chunk_index:04d}")` 确定性映射（Qdrant 只接受 UUID/无符号整数 ID；chunk_id 字符串保留于 payload 语义之外，仅作映射输入）。
+- 点 ID：`uuid5(NAMESPACE_URL, f"{url}|{content_hash}-{chunk_index:04d}")` 确定性映射（Qdrant 只接受 UUID/无符号整数 ID；url 纳入输入使跨栏目同文页面各自独立成点，delete/stale 按 URL 过滤不误伤；chunk_id 字符串仅作 payload 语义外的映射输入）。
 
 ## 9. 提示词草案
 
