@@ -37,7 +37,10 @@ def extract_effective_date(text: str) -> date | None:
 
 def _parse_html(raw: RawPage) -> Document:
     html = Path(raw.html_path).read_text(encoding="utf-8", errors="ignore")
-    text = clean_text(trafilatura.extract(html, include_comments=False) or "")
+    # favor_precision=True: 激进拒绝无文章结构的页面（纯导航页/栏目列表页，
+    # trafilatura 默认 baseline-rescue 会整页抓取成导航文本——Task 10 实测）
+    text = clean_text(trafilatura.extract(html, include_comments=False,
+                                          favor_precision=True) or "")
     return Document(url=raw.url, category=raw.category, title=raw.title or "",
                     text=text, content_hash=sha256(text),
                     published_at=raw.published_at,
