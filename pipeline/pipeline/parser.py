@@ -55,8 +55,15 @@ def _parse_pdf(pdf_url: str, pdf_path: Path, raw: RawPage) -> Document:
                     source_path=pdf_path)
 
 
+MIN_TEXT_LENGTH = 40  # 最小正文长度（字符）——过滤栏目列表页/导航残留等近空页面
+
+
 def parse(raw: RawPage) -> list[Document]:
-    """一个 RawPage → 若干 Document（HTML 正文 + 每份 PDF 各一篇），空文本丢弃。"""
+    """一个 RawPage → 若干 Document（HTML 正文 + 每份 PDF 各一篇）。
+
+    丢弃空文本与过短文本（<MIN_TEXT_LENGTH）——学校 CMS 的栏目列表页/纯导航页
+    trafilatura 会残留少量导航链接文本，入库即成垃圾 chunk（Task 10 实测发现）。
+    """
     docs = [_parse_html(raw)]
     docs += [_parse_pdf(url, path, raw) for url, path in raw.pdf_files]
-    return [d for d in docs if d.text]
+    return [d for d in docs if len(d.text) >= MIN_TEXT_LENGTH]

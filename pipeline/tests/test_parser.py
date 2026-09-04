@@ -68,7 +68,8 @@ def test_parse_pdf(tmp_path):
     html = tmp_path / "p.html"
     html.write_text(HTML, encoding="utf-8")
     pdf = tmp_path / "rule.pdf"
-    make_pdf(pdf, "学生选课管理办法。本规定自2024年3月1日起执行。")
+    make_pdf(pdf, "为规范学生选课行为，维护正常教学秩序，特制定学生选课管理办法，"
+                  "全体学生应严格按照本办法执行选课程序。本规定自2024年3月1日起执行。")
     raw = RawPage(url="https://school.edu.cn/p", category="教务政策", html_path=html,
                   pdf_files=[("https://school.edu.cn/r.pdf", pdf)])
     docs = parse(raw)
@@ -83,6 +84,16 @@ def test_parse_skips_empty(tmp_path):
     html = tmp_path / "empty.html"
     html.write_text("<html><body></body></html>", encoding="utf-8")
     raw = RawPage(url="https://school.edu.cn/e", category="教务政策", html_path=html)
+    assert parse(raw) == []
+
+
+def test_parse_skips_short_text(tmp_path):
+    """导航残留/近空页面（<MIN_TEXT_LENGTH）不入库——Task 10 实测列表页噪声。"""
+    html = tmp_path / "nav.html"
+    html.write_text("<html><body><div id=\"header\"><nav>首页 机构设置 教务平台 "
+                    "管理系统 教室管理平台 档案管理系统</nav></div></body></html>",
+                    encoding="utf-8")
+    raw = RawPage(url="https://school.edu.cn/nav", category="教务政策", html_path=html)
     assert parse(raw) == []
 
 
