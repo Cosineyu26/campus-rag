@@ -945,7 +945,8 @@ from fastapi.testclient import TestClient
 
 
 class FakeModel:
-    def encode(self, texts, batch_size=None, return_dense=None, return_sparse=None):
+    def encode(self, texts, batch_size=None, return_dense=None, return_sparse=None,
+               normalize_embeddings=None):  # normalize_embeddings: 与 app.py 调用保持一致
         return {
             "dense_vecs": np.array([[0.1] * 3] * len(texts)),
             "lexical_weights": [{0: 1.0, 5: 0.5}] * len(texts),
@@ -985,7 +986,7 @@ Expected: FAIL，`ModuleNotFoundError: No module named 'app'`
 ```txt
 fastapi>=0.115
 uvicorn>=0.30
-sentence-transformers>=3.0
+sentence-transformers>=3.0,<6.0   # <6.0: 6.x 移除了 return_dense/return_sparse API（app.py 依赖）
 numpy>=1.26
 httpx>=0.27
 ```
