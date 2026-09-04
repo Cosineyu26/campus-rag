@@ -381,7 +381,9 @@ async def fetch_page_default(url: str, client=None) -> PageData:
         result = await crawler.arun(url=url, config=CrawlerRunConfig())
     if not result or not result.success:
         raise FetchError(f"fetch failed: {url}")
-    links = list((result.links or {}).get("internal", [])) + list((result.links or {}).get("external", []))
+    # crawl4ai>=0.9 的 result.links 形如 {"internal": [{"href","text"},...], "external": [...]}
+    raw_links = (result.links or {}).get("internal", []) + (result.links or {}).get("external", [])
+    links = [str(l.get("href", "")) for l in raw_links if isinstance(l, dict) and l.get("href")]
     return PageData(final_url=str(result.url or url), html=result.html or "", links=links)
 
 
