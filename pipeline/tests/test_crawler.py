@@ -1,9 +1,9 @@
 import asyncio
 import json
 from pathlib import Path
-from types import SimpleNamespace
 
-from pipeline.crawler import Crawler, FetchError, PageData, links_from_result
+from pipeline.crawler import (Crawler, FetchError, PageData,
+                              extract_links_from_html)
 from pipeline.config import SiteConfig
 
 
@@ -68,31 +68,56 @@ def test_crawl_respects_depth_and_visited(tmp_path):
     assert fetcher.calls.count("https://school.edu.cn/a") == 1  # 自环只爬一次
 
 
-def _fake_result(links=None):
-    return SimpleNamespace(success=True, url="https://school.edu.cn/p",
-                           html="<html></html>", links=links)
+HTML_FIXTURE = """<html><body>
+<a href="/list1.htm">列表1</a>
+<a href="info/1041/10608.htm">详情</a>
+<a href="javascript:void(0)">跳过</a>
+<a href="#frag">锚点</a>
+<a href="mailto:x@y.edu.cn">邮件</a>
+<a href="/list1.htm">重复</a>
+<a href="http://outer.edu.cn/x">外域</a>
+<a>无href</a>
+</body></html>"""
 
 
-def test_links_from_result_merges_internal_and_external():
-    """dict 形 links：internal+external 合并按序提取 href。"""
-    result = _fake_result(links={
-        "internal": [{"href": "/a", "text": "甲"}, {"href": "/b", "text": "乙"}],
-        "external": [{"href": "https://school.edu.cn/c", "text": "丙"}],
-    })
-    assert links_from_result(result) == ["/a", "/b", "https://school.edu.cn/c"]
+def test_extract_links_from_html_dedups_and_filters():
+    """纯 HTML 链接提取：去重保序、剔除 js/mailto/锚点，保留相对与外域原样。"""
+    assert extract_links_from_html(HTML_FIXTURE) == [
+        "/list1.htm", "info/1041/10608.htm",
+        "http://outer.edu.cn/x",
+    ]
 
 
-def test_links_from_result_handles_empty_links():
-    """空/缺失 links 都返回空列表，不抛异常。"""
-    assert links_from_result(_fake_result(links=None)) == []
-    assert links_from_result(_fake_result(links={})) == []
-    assert links_from_result(_fake_result(links={"internal": [], "external": []})) == []
+def test_extract_links_from_html_empty():
+    assert extract_links_from_html("<html></html>") == []
 
 
-def test_links_from_result_skips_malformed_entries():
-    """非 dict 条目、缺 href、空 href 一律剔除，只留有效链接。"""
-    result = _fake_result(links={
-        "internal": [{"href": "/a"}, {"text": "无href"}, "坏条目", None, {"href": ""}],
-        "external": [{"href": "/b"}, 42],
-    })
-    assert links_from_result(result) == ["/a", "/b"]
+def test_fetch_page_default_http(respx_mock):
+    """fetch_page_default 用注入的 client 抓静态页：状态码/重定向/链接提取。"""
+    import httpx
+    from pipeline.crawler import fetch_page_default
+
+    respx_mock.get("https://school.edu.cn/p.htm").mock(
+        return_value=httpx.Response(200, text=HTML_FIXTURE))
+    client = httpx.AsyncClient()
+    page = asyncio.run(fetch_page_default("https://school.edu.cn/p.htm", client=client))
+    assert page.final_url == "https://school.edu.cn/p.htm"
+    assert "/list1.htm" in page.links and "javascript:void(0)" not in page.links
+    asyncio.run(client.aclose())
+
+
+def test_fetch_page_default_raises_on_http_error(respx_mock):
+    """非 200 状态抛 FetchError（单页失败不中断整轮的语义依赖它）。"""
+    import httpx
+    from pipeline.crawler import fetch_page_default
+
+    respx_mock.get("https://school.edu.cn/404.htm").mock(
+        return_value=httpx.Response(404))
+    client = httpx.AsyncClient()
+    try:
+        asyncio.run(fetch_page_default("https://school.edu.cn/404.htm", client=client))
+        assert False, "should raise"
+    except FetchError as e:
+        assert "404" in str(e)
+    finally:
+        asyncio.run(client.aclose())

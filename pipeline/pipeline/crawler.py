@@ -24,22 +24,64 @@ class PageData:
     links: list[str]
 
 
-def links_from_result(result) -> list[str]:
-    """crawl4ai>=0.9 的 result.links 形如 {"internal": [{"href","text"},...], "external": [...]}。"""
-    raw_links = (result.links or {}).get("internal", []) + (result.links or {}).get("external", [])
-    return [str(l.get("href", "")) for l in raw_links if isinstance(l, dict) and l.get("href")]
+from html.parser import HTMLParser
+
+
+class _LinkExtractor(HTMLParser):
+    """从静态 HTML 提取 <a href> 列表（学校官网为服务端渲染的静态站）。"""
+
+    def __init__(self):
+        super().__init__()
+        self.links: list[str] = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag.lower() != "a":
+            return
+        for key, value in attrs:
+            if key.lower() == "href" and value:
+                self.links.append(value.strip())
+
+
+_SKIP_PREFIXES = ("javascript:", "mailto:", "tel:", "#", "data:")
+
+
+def extract_links_from_html(html: str) -> list[str]:
+    """提取全部 <a href>：去重保序、过滤非网页链接。返回原始 href（由调用方 urljoin）。"""
+    parser = _LinkExtractor()
+    parser.feed(html)
+    seen: set[str] = set()
+    out: list[str] = []
+    for link in parser.links:
+        if link.startswith(_SKIP_PREFIXES) or link in seen:
+            continue
+        seen.add(link)
+        out.append(link)
+    return out
 
 
 async def fetch_page_default(url: str, client=None) -> PageData:
-    """crawl4ai 封装层：crawl4ai 的 API 变动只允许改这个函数。"""
-    from crawl4ai import AsyncWebCrawler, CrawlerRunConfig
+    """默认抓取器：纯 HTTP（静态 HTML 站无需浏览器渲染，更快更稳）。
 
-    async with AsyncWebCrawler() as crawler:
-        result = await crawler.arun(url=url, config=CrawlerRunConfig())
-    if not result or not result.success:
-        raise FetchError(f"fetch failed: {url}")
-    return PageData(final_url=str(result.url or url), html=result.html or "",
-                    links=links_from_result(result))
+    若目标站需要 JS 渲染，可替换为 crawl4ai/Playwright 实现——fetch_page
+    注入点保证爬虫其余逻辑不变（本实现为 Task 10 真实爬取实测后从 crawl4ai
+    切换而来：学校 CMS 为服务端渲染，playwright 徒增脆弱依赖）。
+    """
+    if client is None:
+        import httpx
+
+        client = httpx.AsyncClient(headers={"User-Agent": "campus-rag/0.1 (+educational)"})
+        close_client = True
+    else:
+        close_client = False
+    try:
+        resp = await client.get(url, follow_redirects=True)
+        if resp.status_code != 200:
+            raise FetchError(f"HTTP {resp.status_code}: {url}")
+        return PageData(final_url=str(resp.url), html=resp.text,
+                        links=extract_links_from_html(resp.text))
+    finally:
+        if close_client:
+            await client.aclose()
 
 
 _TITLE_RE = re.compile(r"<title[^>]*>(.*?)</title>", re.S | re.I)
