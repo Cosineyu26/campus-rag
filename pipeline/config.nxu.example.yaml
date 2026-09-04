@@ -31,3 +31,5 @@ options:
   data_dir: data
   chunk_size: 500
   chunk_overlap: 60
+  # 文章 URL 形态（排除栏目/列表页 .htm 骨架）：info 文章、content.jsp 动态、.pdf
+  article_url_pattern: '(/info/|content\.jsp|\.pdf)'

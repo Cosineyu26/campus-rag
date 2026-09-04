@@ -204,3 +204,21 @@ def test_sync_vanish_excludes_failed_site_category(tmp_path):
     assert reg.staled == ["https://x/d"]                 # 只有健康站点的消失页标 stale
     assert "https://x/c" not in reg.staled               # 失败站点的消失页被豁免
     assert len(qdrant.staled) == 1
+
+
+def test_is_article_url():
+    from pipeline.sync import is_article_url
+
+    pat = r"(/info/|content\.jsp|\.pdf)"
+    assert is_article_url("https://x.edu.cn/info/1041/10608.htm", pat)
+    assert is_article_url("https://x.edu.cn/content.jsp?urltype=news&wbnewsid=1", pat)
+    assert is_article_url("https://x.edu.cn/rule.pdf", pat)
+    assert not is_article_url("https://x.edu.cn/gltl.htm", pat)
+    assert not is_article_url("https://x.edu.cn/gltl/3.htm", pat)
+    assert is_article_url("https://x.edu.cn/anything.htm", "")  # 空 pattern = 全收录
+
+
+def test_is_article_url_none_pattern():
+    from pipeline.sync import is_article_url
+
+    assert is_article_url("https://x.edu.cn/gltl.htm", None) is True  # 兼容 None

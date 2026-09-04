@@ -16,3 +16,6 @@ options:
   data_dir: data
   chunk_size: 500
   chunk_overlap: 60
+  # 仅收录匹配此正则的页面（文章 URL 形态）；留空则收录全部。
+  # 学校 CMS 场景示例：'(/info/|content\.jsp|\.pdf)'（排除栏目/列表页 .htm）
+  article_url_pattern: ''

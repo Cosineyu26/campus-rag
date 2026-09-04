@@ -23,6 +23,9 @@ class PipelineConfig:
     data_dir: Path = Path("data")
     chunk_size: int = 500
     chunk_overlap: int = 60
+    # 仅收录匹配该正则的页面（文章 URL 形态；空 = 全部收录）。学校 CMS 的栏目/
+    # 列表页是 .htm 骨架无文章正文，靠它排除（Task 10 实测 110 篇含 20 栏目页）
+    article_url_pattern: str = ""
     qdrant_url: str = field(default_factory=lambda: os.getenv("QDRANT_URL", "http://localhost:6333"))
     qdrant_collection: str = "campus_kb"
     mysql_url: str = field(default_factory=lambda: os.getenv(

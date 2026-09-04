@@ -1,4 +1,5 @@
 import asyncio
+import re
 from dataclasses import dataclass, field
 
 from qdrant_client import QdrantClient
@@ -12,6 +13,14 @@ from .ingester import (delete_by_url, mark_active_by_url, mark_stale_by_url,
 from .models import Document, RawPage
 from .parser import parse
 from .registry import DocumentRegistry, RegistryRecord
+
+
+def is_article_url(url: str, pattern: str) -> bool:
+    """URL 是否应收录为文章页（pattern 为空 = 全部收录，兼容测试与通用场景）。
+
+    学校 CMS 的栏目页/列表页是 .htm 骨架（无文章正文），靠文章 URL 形态排除。
+    """
+    return bool(re.search(pattern, url)) if pattern else True
 
 
 @dataclass
@@ -44,7 +53,8 @@ def run_full_sync(config: PipelineConfig, *,
             failed_sites.add(site.category)
         for raw in raw_pages:
             try:
-                docs.extend(parse(raw))
+                docs.extend(d for d in parse(raw)
+                            if is_article_url(d.url, config.article_url_pattern))
             except Exception as e:
                 report.failed.append(f"{raw.url}: {e}")
 
