@@ -1283,7 +1283,8 @@ def test_upsert_with_real_client_contract():
 
     client = QdrantClient(":memory:")
     chunks = [make_chunk(0)]
-    upsert_chunks(client, "campus_kb", chunks, [([0.1, 0.2], {3: 1.0})])
+    # 稠密向量须 1024 维——真实引擎按集合配置校验维度（Fake 不校验）
+    upsert_chunks(client, "campus_kb", chunks, [([0.1] * 1024, {3: 1.0})])
     hit = client.retrieve("campus_kb", [str(uuid.uuid5(uuid.NAMESPACE_URL, "hash-0000"))])
     assert len(hit) == 1 and hit[0].payload["url"] == "https://x/a"
 
