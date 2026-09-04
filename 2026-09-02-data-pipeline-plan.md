@@ -1481,8 +1481,11 @@ def test_sync_new_updated_stale(tmp_path):
     config = make_config(tmp_path)
     crawler = FakeCrawler([RawPage(url="https://x/a", category="教务政策",
                                    html_path=tmp_path / "a.html")])
-    # 注意：必须注入 parse（不读真实文件）——默认 parse 会读取不存在的 html_path
-    parse_a = lambda raw: [make_doc("https://x/a", "第一条 新内容。" * 20)]
+    # 注意：必须注入 parse（不读真实文件）——默认 parse 会读取不存在的 html_path。
+    # parse 产出两篇 doc：a（注册表已有→updated）与 c（新 URL→new）；若只产 a 则
+    # new==1/upserts==2 断言永不可满足（brief 原 fixture 自相矛盾，已修正）
+    parse_a = lambda raw: [make_doc("https://x/a", "第一条 新内容。" * 20),
+                           make_doc("https://x/c", "第一条 新增内容。" * 20)]
     # 注册表里 a 是旧哈希、b 页面已消失
     reg = FakeRegistry({
         "https://x/a": RegistryRecord(url="https://x/a", title="t", category="教务政策",
@@ -1645,7 +1648,8 @@ if __name__ == "__main__":
 # pipeline/pipeline/__main__.py
 from .cli import main
 
-main()
+# SystemExit: python -m pipeline 需传导 main() 退出码（失败 exit 1，crontab 依赖）
+raise SystemExit(main())
 ```
 
 - [ ] **Step 5: 跑测试确认通过**
