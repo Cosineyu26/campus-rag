@@ -217,7 +217,7 @@ messages:
 
 documents:   -- 文档注册表（增量比对依据）
   id            BIGINT PK AUTO_INCREMENT
-  url           VARCHAR(1024) UNIQUE
+  url           VARCHAR(768) UNIQUE   -- 768: utf8mb4 下 768*4=3072B=InnoDB 唯一索引上限（1024 会 ERROR 1071）
   title         VARCHAR(512)
   category      VARCHAR(64)   -- 栏目
   content_hash  CHAR(64)
