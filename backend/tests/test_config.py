@@ -11,7 +11,7 @@ def test_settings_env_override(monkeypatch):
 
 def test_settings_defaults():
     s = Settings()
-    assert s.llm_url == "http://localhost:8000"
+    assert s.llm_url == "http://localhost:11434"
     assert s.qdrant_url == "http://localhost:6333"
     assert s.embed_url == "http://localhost:8001"
     assert s.rerank_url == "http://localhost:8002"
